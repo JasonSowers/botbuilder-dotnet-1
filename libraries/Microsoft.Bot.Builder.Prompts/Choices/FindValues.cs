@@ -3,7 +3,10 @@
 
 namespace Microsoft.Bot.Builder.Prompts.Choices
 {
-    public class FindValues
+    public static partial class BotBuilderChoices
     {
+        public static void FindValues()
+        {
+        }
     }
 }

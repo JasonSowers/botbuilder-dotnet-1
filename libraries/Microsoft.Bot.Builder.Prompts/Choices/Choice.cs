@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using Microsoft.Bot.Schema;
 
 namespace Microsoft.Bot.Builder.Prompts.Choices
@@ -20,6 +21,6 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
         ///<summary>
         /// (Optional) list of synonyms to recognize in addition to the value.
         ///</summary>
-        public string[] Synonyms { get; set; }
+        public List<string> Synonyms { get; set; }
     }
 }

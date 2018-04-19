@@ -3,7 +3,16 @@
 
 namespace Microsoft.Bot.Builder.Prompts.Choices
 {
-    public class ModelResult
+    public class ModelResult<T>
     {
+        public string Text { get; set; }
+
+        public int Start { get; set; }
+
+        public int End { get; set; }
+
+        public string TypeName { get; set; }
+
+        public T Resolution { get; set; }
     }
 }

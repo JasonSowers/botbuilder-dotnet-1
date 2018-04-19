@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System;
 using System.Linq;
 using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Schema;
@@ -10,19 +9,19 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
 {
     public class ChoiceFactory
     {
-        public static Activity ForChannel(TurnContext context, Choice[] choices, string text, string speak, ChoiceFactoryOptions options)
+        public static IMessageActivity ForChannel(TurnContext context, Choice[] choices, string text, string speak, ChoiceFactoryOptions options)
         {
             return ForChannel(Channel.GetChannelId(context), choices, text, speak, options);
         }
-        public static Activity ForChannel(TurnContext context, string[] choices, string text, string speak, ChoiceFactoryOptions options)
+        public static IMessageActivity ForChannel(TurnContext context, string[] choices, string text, string speak, ChoiceFactoryOptions options)
         {
             return ForChannel(Channel.GetChannelId(context), ToChoices(choices), text, speak, options);
         }
-        public static Activity ForChannel(string channelId, string[] choices, string text, string speak, ChoiceFactoryOptions options)
+        public static IMessageActivity ForChannel(string channelId, string[] choices, string text, string speak, ChoiceFactoryOptions options)
         {
             return ForChannel(channelId, ToChoices(choices), text, speak, options);
         }
-        public static Activity ForChannel(string channelId, Choice[] list, string text, string speak, ChoiceFactoryOptions options)
+        public static IMessageActivity ForChannel(string channelId, Choice[] list, string text, string speak, ChoiceFactoryOptions options)
         {
             // Find maximum title length
             var maxTitleLength = 0;
@@ -46,17 +45,17 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
             {
                 // We always prefer showing choices using suggested actions. If the titles are too long, however,
                 // we'll have to show them as a text list.
-                return ChoiceFactory.SuggestedAction(list, text, speak, options);
+                return SuggestedAction(list, text, speak, options);
             }
             else if (!longTitles && list.Length <= 3)
             {
                 // If the titles are short and there are 3 or less choices we'll use an inline list.
-                return ChoiceFactory.Inline(list, text, speak, options);
+                return Inline(list, text, speak, options);
             }
             else
             {
                 // Show a numbered list.
-                return ChoiceFactory.List(list, text, speak, options);
+                return List(list, text, speak, options);
             }
         }
 
@@ -134,7 +133,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
             return MessageFactory.Text(txt, speak, InputHints.ExpectingInput);
         }
 
-        public static Activity SuggestedAction(Choice[] choices, string text, string speak, ChoiceFactoryOptions options)
+        public static IMessageActivity SuggestedAction(Choice[] choices, string text, string speak, ChoiceFactoryOptions options)
         {
             // Map choices to actions
             var actions = choices.Select((choice) => {
@@ -151,7 +150,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
                         Title = choice.Value
                     };
                 }
-            });
+            }).ToList();
 
             // Return activity with choices as suggested actions
             return MessageFactory.SuggestedActions(actions, text, speak, InputHints.ExpectingInput);

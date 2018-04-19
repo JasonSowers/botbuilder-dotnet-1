@@ -9,7 +9,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
         /// (Optional) if true, then only some of the tokens in a value need to exist to be considered
         /// a match. The default value is "false".
         ///</summary>
-        public bool? AllowPartialMatches { get; set; }
+        public bool AllowPartialMatches { get; set; }
 
         ///<summary>
         /// (Optional) locale/culture code of the utterance. The default is `en-US`.
