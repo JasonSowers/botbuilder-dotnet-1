@@ -18,10 +18,14 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
 
     public class Tokenizer
     {
+        public static TokenizerFunction DefaultTokenizer = DefaultTokenizerImpl;
+
         ///<summary>
-        /// Simple tokenizer that breaks on spaces and punctuation. The only normalization done is to lowercase
+        /// Simple tokenizer that breaks on spaces and punctuation. The only normalization done is to lowercase.
+        /// This is an exact port of the JavaScript implementation of the algorithm except that here
+        /// the .NET library functions are used in place of the JavaScript string code point functions.
         ///</summary>
-        public static List<Token> DefaultTokenizer(string text, string locale = null)
+        public static List<Token> DefaultTokenizerImpl(string text, string locale = null)
         {
             var tokens = new List<Token>();
             Token token = null;
@@ -41,19 +45,21 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
                         :
                     Convert.ToInt32(text[i]);
 
-                var chr = Char.ConvertFromUtf32(codePoint);
+                var chr = char.ConvertFromUtf32(codePoint);
 
                 // Process current character
                 if (IsBreakingChar(codePoint))
                 {
                     // Character is in Unicode Plane 0 and is in an excluded block
                     AppendToken(tokens, token, i - 1);
+                    token = null;
                 }
                 else if (codePoint > 0xFFFF)
                 {
                     // Character is in a Supplementary Unicode Plane. This is where emoji live so
                     // we're going to just break each character in this range out as its own token.
                     AppendToken(tokens, token, i - 1);
+                    token = null;
                     tokens.Add(new Token
                     {
                         Start = i,
@@ -103,7 +109,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
                     IsBetween(codePoint, 0x2E00, 0x2E7F)); 
         }
 
-        public static bool IsBetween(int value, int from, int to)
+        private static bool IsBetween(int value, int from, int to)
         {
             return (value >= from && value <= to);
         }

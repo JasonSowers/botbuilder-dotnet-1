@@ -9,7 +9,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
 {
     public static class Find
     {
-        public static List<ModelResult<FoundChoice>> FindChoices(string utterance, List<string> choices, FindChoicesOptions options)
+        public static List<ModelResult<FoundChoice>> FindChoices(string utterance, List<string> choices, FindChoicesOptions options = null)
         {
             if (choices == null)
                 throw new ArgumentNullException(nameof(choices));
@@ -17,7 +17,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
             return FindChoices(utterance, choices.Select(s => new Choice { Value = s }).ToList(), options);
         }
 
-        public static List<ModelResult<FoundChoice>> FindChoices(string utterance, List<Choice> choices, FindChoicesOptions options)
+        public static List<ModelResult<FoundChoice>> FindChoices(string utterance, List<Choice> choices, FindChoicesOptions options = null)
         {
             if (string.IsNullOrEmpty(utterance))
                 throw new ArgumentNullException(nameof(utterance));
@@ -37,25 +37,22 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
 
                 if (!opt.NoValue)
                 {
-                    synonyms.Append(new SortedValue { Value = choice.Value, Index = index });
+                    synonyms.Add(new SortedValue { Value = choice.Value, Index = index });
                 }
                 if (choice.Action != null && choice.Action.Title != null && !opt.NoAction)
                 {
-                    synonyms.Append(new SortedValue { Value = choice.Action.Title, Index = index });
+                    synonyms.Add(new SortedValue { Value = choice.Action.Title, Index = index });
                 }
 
                 if (choice.Synonyms != null)
                 {
                     foreach (var synonym in choice.Synonyms)
                     {
-                        synonyms.Append(new SortedValue { Value = synonym, Index = index });
+                        synonyms.Add(new SortedValue { Value = synonym, Index = index });
                     }
                 }
             }
 
-            return new List<ModelResult<FoundChoice>>();
-
-            /*
             // Find synonyms in utterance and map back to their choices
             return FindValues(utterance, synonyms, options).Select((v) =>
              {
@@ -75,11 +72,9 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
                      }
                  };
              }).ToList();
-             */
         }
 
-        /*
-        public static List<ModelResult<FoundValue>> FindValues(string utterance, List<SortedValue> values, FindValuesOptions options)
+        public static List<ModelResult<FoundValue>> FindValues(string utterance, List<SortedValue> values, FindValuesOptions options = null)
         {
             // Sort values in descending order by length so that the longest value is searched over first.
             var list = values;
@@ -88,7 +83,7 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
             // Search for each value within the utterance.
             var matches = new List<ModelResult<FoundValue>>();
             var opt = options ?? new FindValuesOptions();
-            var tokenizer = (opt.Tokenizer || DefaultTokenizer);
+            var tokenizer = opt.Tokenizer ?? Tokenizer.DefaultTokenizer;
             var tokens = tokenizer(utterance, opt.Locale);
             var maxDistance = opt.MaxTokenDistance ?? 2;
 
@@ -99,62 +94,71 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
                 // - To match "last one" in "the last time I chose the last one" we need 
                 //   to re-search the string starting from the end of the previous match.
                 // - The start & end position returned for the match are token positions.
-                let startPos = 0;
-                const vTokens = tokenizer(entry.value.trim(), opt.locale);
-                while (startPos < tokens.length)
+                var startPos = 0;
+                var vTokens = tokenizer(entry.Value.Trim(), opt.Locale);
+                while (startPos < tokens.Count)
                 {
-                    const match = matchValue(entry.index, entry.value, vTokens, startPos);
-                    if (match)
+                    var match = MatchValue(tokens, maxDistance, opt, entry.Index, entry.Value, vTokens, startPos);
+                    if (match != null)
                     {
-                        startPos = match.end + 1;
-                        matches.push(match);
+                        startPos = match.End + 1;
+                        matches.Add(match);
                     }
                     else
                     {
                         break;
                     }
                 }
-            });
+            }
 
             // Sort matches by score descending
-            matches = matches.sort((a, b) => b.resolution.score - a.resolution.score);
+            matches.Sort((a, b) => (int)(b.Resolution.Score - a.Resolution.Score));
 
             // Filter out duplicate matching indexes and overlapping characters.
             // - The start & end positions are token positions and need to be translated to 
             //   character positions before returning. We also need to populate the "text"
             //   field as well. 
-            const results: ModelResult<FoundValue>[] = [];
-            const foundIndexes: { [index: number]: boolean
-        } = {};
-    const usedTokens: { [index: number]: boolean } = {};
-        matches.forEach((match) => {
-            // Apply filters
-            let add = !foundIndexes.hasOwnProperty(match.resolution.index);
-            for (let i = match.start; i <= match.end; i++) {
-                if (usedTokens[i]) {
-                    add = false;
-                    break;
+            var results = new List<ModelResult<FoundValue>>();
+            var foundIndexes = new HashSet<int>();
+            var usedTokens = new HashSet<int>();
+
+            foreach (var match in matches)
+            {
+                // Apply filters
+                bool add = !foundIndexes.Contains(match.Resolution.Index);
+                for (var i = match.Start; i <= match.End; i++)
+                {
+                    if (usedTokens.Contains(i))
+                    {
+                        add = false;
+                        break;
+                    }
+                }
+
+                // Add to results
+                if (add)
+                {
+                    // Update filter info
+                    foundIndexes.Add(match.Resolution.Index);
+
+                    for (var i = match.Start; i <= match.End; i++)
+                    {
+                        usedTokens.Add(i);
+                    }
+
+                    // Translate start & end and populate text field
+                    match.Start = tokens[match.Start].Start;
+                    match.End = tokens[match.End].End;
+                    // Note: JavaScript Substring is (start, end) whereas .NET is (start, len)
+                    match.Text = utterance.Substring(match.Start, (match.End + 1) - match.Start);
+                    results.Add(match);
                 }
             }
 
-            // Add to results
-            if (add) {
-                // Update filter info
-                foundIndexes[match.resolution.index] = true;
-                for (let i = match.start; i <= match.end; i++) { usedTokens[i] = true }
-
-                // Translate start & end and populate text field
-                match.start = tokens[match.start].start;
-                match.end = tokens[match.end].end;
-                match.text = utterance.substring(match.start, match.end + 1);
-                results.push(match);
-            }
-        });
-
             // Return the results sorted by position in the utterance
-            return results.sort((a, b) => a.start - b.start);
+            results.Sort((a, b) => a.Start - b.Start);
+            return results;
         }
-        */
 
         private static int IndexOfToken(List<Token> tokens, Token token, int startPos)
         {
@@ -241,7 +245,5 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
             }
             return result;
         }
-
-
     }
 }

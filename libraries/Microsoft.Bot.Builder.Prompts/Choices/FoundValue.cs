@@ -19,6 +19,6 @@ namespace Microsoft.Bot.Builder.Prompts.Choices
         /// The accuracy with which the value matched the specified portion of the utterance. A
         /// value of 1.0 would indicate a perfect match.
         ///</summary>
-        public int Score { get; set; }
+        public float Score { get; set; }
     }
 }
